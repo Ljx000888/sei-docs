@@ -1495,7 +1495,7 @@ Each parameter was set by a governance parameter change, which takes effect when
 
 > [!NOTE]
 >
-> If you have an IBC transfer that was submitted but never completed, contact [Sei Tech Chat](https://t.me/+KZdhZ1eE-G01NmZk) or [Discord](https://discord.com/invite/sei). Both directions are closed, so do not assume that a pending transfer will settle or refund on its own.
+> If you have an IBC transfer that was submitted but never completed, contact [Sei Tech Chat](https://t.me/+KZdhZ1eE-G01NmZk) or [Discord](https://discord.gg/mCJU2ReWxe). Both directions are closed, so do not assume that a pending transfer will settle or refund on its own.
 
 ## Affected IBC assets
 
@@ -1519,7 +1519,7 @@ The Wormhole-bridged assets are not IBC vouchers and were not affected by Propos
 
 * **Transfer within Sei.** These balances move normally between Sei addresses and through their ERC-20 pointer contracts.
 * **Swap on a Sei DEX.** Swaps do not use IBC and still execute. These tokens can no longer be redeemed for the underlying asset, so the liquidity available for them is limited and may decline further. Check the quote before you trade.
-* **Contact support.** For anything else, including incomplete transfers and assets not listed above, ask for help in [Sei Tech Chat](https://t.me/+KZdhZ1eE-G01NmZk) or [Discord](https://discord.com/invite/sei).
+* **Contact support.** For anything else, including incomplete transfers and assets not listed above, ask for help in [Sei Tech Chat](https://t.me/+KZdhZ1eE-G01NmZk) or [Discord](https://discord.gg/mCJU2ReWxe).
 
 The mention of third-party platforms does not constitute an endorsement. You should do your own research before you use any third-party service.
 
@@ -1555,7 +1555,7 @@ The only remaining option on Sei is an on-chain swap, which does not use IBC:
 
 * If you have not already done so, wind down and withdraw your positions. Supplied USDC.n cannot be redeemed off Sei.
 
-If you hold a balance that you cannot resolve this way, contact [Sei Tech Chat](https://t.me/+KZdhZ1eE-G01NmZk) or [Discord](https://discord.com/invite/sei).
+If you hold a balance that you cannot resolve this way, contact [Sei Tech Chat](https://t.me/+KZdhZ1eE-G01NmZk) or [Discord](https://discord.gg/mCJU2ReWxe).
 
 ### 3) Address association (Seistream)
 
@@ -2461,7 +2461,7 @@ If you need USDC to test ERC-20 workflows, use the Circle Faucet to get USDC on 
 
 > [!NOTE]
 >
-> If the faucet is temporarily unavailable, try again later. You can also ask for help in the [Sei Discord](https://discord.gg/sei) or [Telegram](https://t.me/+KZdhZ1eE-G01NmZk) developer channels.
+> If the faucet is temporarily unavailable, try again later. You can also ask for help in the [Sei Discord](https://discord.gg/mCJU2ReWxe) or [Telegram](https://t.me/+KZdhZ1eE-G01NmZk) developer channels.
 
 
 This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform.
@@ -4044,7 +4044,7 @@ Before you start, make sure that you have:
 For more help, you can contact these support channels:
 
 * **Sei network community**: Join the official Sei network community on
-  [Telegram](https://t.me/seinetwork) or [Discord](https://discord.gg/sei).
+  [Telegram](https://t.me/seinetwork) or [Discord](https://discord.gg/mCJU2ReWxe).
 * **Ledger support**: For Ledger-specific issues, go to the
   [Ledger Support Center](https://support.ledger.com/).
 * **Wallet support**: For wallet-related questions, see the support resources
@@ -13692,7 +13692,7 @@ If you have an issue that this guide does not cover:
 2. **Verify the configuration**: Make sure that tracing is enabled on your node.
 3. **Test connectivity**: Confirm that the RPC endpoints are accessible.
 4. **Simplify tracers**: Try built-in tracers first.
-5. **Community support**: Ask in the #dev-support channel of the [Sei Discord](https://discord.gg/sei).
+5. **Community support**: Ask in the #dev-support channel of the [Sei Discord](https://discord.gg/mCJU2ReWxe).
 
 > [!NOTE]
 >
@@ -16035,7 +16035,7 @@ function validateWeightedVoteComprehensive(options: Array<{ option: number; weig
 >
 > **Need help?** If you have problems, use these resources:
 >
-> * **Discord:** [Sei Community Discord](https://discord.gg/sei)
+> * **Discord:** [Sei Community Discord](https://discord.gg/mCJU2ReWxe)
 > * **GitHub:** [Sei Protocol repository](https://github.com/sei-protocol/sei-chain)
 > * **Explorer:** [View proposals on Sei Explorer](https://sei.explorers.guru/proposals)
 
@@ -16771,7 +16771,7 @@ async function handleMissingKeys(jsonPrecompile: ethers.Contract, data: any) {
 
 > [!NOTE]
 >
-> **Need help?** If you have a problem that this page does not cover, look for community support in the [Sei Discord](https://discord.gg/sei) or the [GitHub repository](https://github.com/sei-protocol/sei-chain).
+> **Need help?** If you have a problem that this page does not cover, look for community support in the [Sei Discord](https://discord.gg/mCJU2ReWxe) or the [GitHub repository](https://github.com/sei-protocol/sei-chain).
 
 
 This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform.
@@ -21053,7 +21053,7 @@ These end-to-end code examples use viem and ethers with Sei:
 
 ## Community and support
 
-* [Discord](https://discord.gg/sei): Join the Sei developer community
+* [Discord](https://discord.gg/mCJU2ReWxe): Join the Sei developer community
 * [GitHub Issues](https://github.com/sei-protocol/sei-js/issues): Report bugs and request features
 
 
@@ -22592,7 +22592,7 @@ class RateLimitedClient {
 ### Community resources
 
 * **Dune Discord**: [https://discord.gg/dune](https://discord.com/invite/ErrzwBz)
-* **Sei Discord**: [https://discord.gg/sei](https://discord.gg/sei)
+* **Sei Discord**: [https://discord.gg/mCJU2ReWxe](https://discord.gg/mCJU2ReWxe)
 
 ## Next steps
 
@@ -39464,7 +39464,7 @@ The OpenTelemetry migration changed the metric names, units, and shape. You must
 
 For specific customizations or other metrics, ask the Sei
 technical communities on [Telegram](https://t.me/+ZN-NcvOWStQwMzk0) or
-[Discord](https://discord.gg/sei).
+[Discord](https://discord.gg/mCJU2ReWxe).
 
 
 This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform.
