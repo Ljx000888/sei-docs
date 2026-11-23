@@ -227,10 +227,10 @@ snapshot-directory = ""
 ###                         Query Configuration                             ###
 ###############################################################################
 
-# Pagination limits on the ABCI and gRPC query path protect the node from expensive
-# store scans by untrusted callers (for example, public RPC clients). Operators tune
-# these values for their deployment, allowlist trusted indexers on Tendermint RPC or
-# Cosmos gRPC, or set disable-limits on nodes not exposed to untrusted callers.
+# Pagination limits on the ABCI query path protect the node from expensive store
+# scans by untrusted callers (for example, public RPC clients). Operators tune these
+# values for their deployment, allowlist trusted indexers on Tendermint RPC, or set
+# disable-limits on nodes not exposed to untrusted callers.
 [query]
 
 # DisableLimits turns off pagination limits for all query origins. Use only on nodes
@@ -238,12 +238,11 @@ snapshot-directory = ""
 disable-limits = false
 
 # TrustedCIDRs lists caller CIDRs that bypass pagination limits. Matching uses the
-# direct TCP peer (Tendermint RPC RemoteAddr or Cosmos gRPC peer address), not
-# forwarded headers. It applies only to abci_query on the Tendermint RPC listener
-# and to queries on grpc.address; REST/LCD on api.address (including grpc-gateway
-# routes) relays queries in-process without caller origin, so trusted-cidrs has no
-# effect there. Trusted indexers using REST should use gRPC or Tendermint RPC, or
-# set disable-limits on nodes not exposed to untrusted callers.
+# direct TCP peer (Tendermint RPC RemoteAddr), not forwarded headers. It applies only
+# to abci_query on the Tendermint RPC listener; REST/LCD on api.address (including
+# grpc-gateway routes) relays queries in-process without caller origin, so
+# trusted-cidrs has no effect there. Trusted indexers using REST should use
+# Tendermint RPC, or set disable-limits on nodes not exposed to untrusted callers.
 # Behind a load balancer or reverse proxy every external client shares the proxy
 # address, so adding the proxy CIDR here bypasses limits for all traffic through
 # that ingress, not just internal indexers.
@@ -256,9 +255,13 @@ max-limit = 1000
 max-offset = 10000
 
 # MaxIterations is the maximum store entries a single untrusted query may scan. 0 uses
-# the default. When the budget is exhausted the response is a partial page with next_key;
-# total stays 0 even when the client set count_total, so next_key != nil with total == 0
-# means the total is unknown rather than zero results.
+# the default. When the budget is exhausted after the offset is reached, the response is
+# a partial page with next_key; total stays 0 even when the client set count_total, so
+# next_key != nil with total == 0 means the total is unknown rather than zero results.
+# When the budget is exhausted before the offset is reached, the query fails with
+# InvalidArgument. Filtered queries (for example gov proposals with a status filter)
+# can hit this on defaults, because entries the filter rejects still count against
+# the budget but not toward the offset.
 max-iterations = 11000
 
 ###############################################################################
@@ -280,6 +283,18 @@ sc-historical-proof-rate-limit = 1
 
 # Historical proof query burst size
 sc-historical-proof-burst = 1
+
+# Enable deprecated ABCI /store state proofs. Disabled by default; this option will be removed with the proof code in a later release.
+sc-enable-state-proof = false
+
+# Max concurrent /subspace queries; served only with SS enabled (<=0 resolves to default 2)
+sc-subspace-query-max-inflight = 2
+
+# Max pairs a /subspace scan may return (<=0 resolves to default 1000; no unlimited setting)
+sc-subspace-max-pairs = 1000
+
+# Max key+value bytes a /subspace scan may accumulate (<=0 resolves to default 4 MiB; no unlimited setting)
+sc-subspace-max-bytes = 4194304
 
 # AsyncCommitBuffer defines the size of asynchronous commit queue, this greatly improve block catching-up
 # performance, setting to 0 means synchronous commit.
@@ -313,8 +328,8 @@ sc-snapshot-write-rate-mbps = 100
 # advanced, unrendered state-commit.sc-write-mode-enable-auto defaults to true,
 # which forces the node to run in auto regardless of this value. In auto the
 # effective mode is derived from the on-disk migration state and advanced by the
-# NumKeysToMigratePerBlock gov param, so the node follows a governance-driven EVM
-# migration with no edits here.
+# NumKeysToMigratePerBlock gov param, so the node follows governance-driven
+# storage migrations with no edits here.
 #
 # To pin an explicit mode (memiavl_only, flatkv_only, evm_migrated,
 # test_only_dual_write, ...) you MUST also set
@@ -324,8 +339,8 @@ sc-snapshot-write-rate-mbps = 100
 # on a flatkv_only-style node would either fail every commit with a
 # version-mismatch error or silently serve reads from an empty memiavl).
 #
-# Valid values: memiavl_only, migrate_evm, evm_migrated, migrate_all_but_bank,
-# all_migrated_but_bank, migrate_bank, flatkv_only, test_only_dual_write, auto.
+# Valid values: memiavl_only, migrate_evm, evm_migrated, migrate_cosmos,
+# flatkv_only, test_only_dual_write, auto.
 sc-write-mode = "memiavl_only"
 
 # HashLogger records a per-block CSV of named hashes (memIAVL module/root hashes, flatKV DB/root
@@ -410,7 +425,8 @@ ss-enable-read-write-metrics = false
 ss-snapshot-enable = false
 
 # EVMDBDirectory defines the directory for the optional EVM state-store DB(s).
-# If unset, defaults to <home>/data/evm_ss when EVM SS is enabled.
+# If unset, defaults to <home>/data/state_store/evm/{backend}. Nodes that
+# already have <home>/data/evm_ss keep using that path.
 evm-ss-db-directory = ""
 
 # EVMSplit controls whether EVM data is routed to a dedicated SS backend.
@@ -429,6 +445,13 @@ evm-ss-separate-dbs = false
 ###############################################################################
 
 [receipt-store]
+# Enable defines whether the receipt store should be enabled.
+# A node with this set to false keeps no receipt history, and its EVM RPC listeners
+# refuse to start, since most eth_* methods read a block's transactions or receipts.
+# Turning it off requires evm.http_enabled and evm.ws_enabled to both be false.
+# defaults to true
+rs-enable = true
+
 # Backend defines the receipt store backend.
 # Supported backends: pebble (aka pebbledb)
 # defaults to pebbledb
@@ -441,23 +464,24 @@ db-directory = ""
 # Applies only when rs-backend = "pebbledb".
 # Set <= 0 for synchronous writes.
 # defaults to 100
-async-write-buffer = 100
+async-write-buffer = 10
 
 # PruneIntervalSeconds defines the interval in seconds to trigger pruning.
 # Receipt retention is controlled by the global min-retain-blocks flag.
 # defaults to 600 seconds
 prune-interval-seconds = 600
 
-# EnableReadWriteMetrics emits estimated read/write counters for Pebble-backed
-# receipt storage.
-# Default: false.
-enable-read-write-metrics = false
-
 # LogFilterParallelism bounds how many blocks a single eth_getLogs query scans
 # concurrently. Applies only when rs-backend = "littidx".
 # Set <= 0 to use the default.
 # defaults to 16
 log-filter-parallelism = 16
+
+# RewardPercentiles is the set of gas-weighted eth_feeHistory reward percentiles computed and
+# stored per block. Applies only when rs-backend = "littidx".
+# Each entry must be in [0, 100], with no duplicates.
+# An empty list ([]) defaults to [0, 10, 20, 25, 30, 50, 75, 90, 100].
+rs-reward-percentiles = []
 
 ###############################################################################
 ###                            EVM Configuration                            ###
@@ -515,6 +539,15 @@ ws_origins = "*"
 # timeout for filters
 filter_timeout = "2m0s"
 
+# maximum number of active eth_newFilter and eth_newBlockFilter filters
+# filters cannot be added if there are too many active eth_newFilter and eth_newBlockFilter
+max_filters = 1000
+
+# maximum number of block hashes an eth_newBlockFilter filter handles at once.
+# Under Autobahn a filter holding this many unpolled hashes is invalidated and removed;
+# otherwise one poll covers at most this many block heights and later polls cover the rest.
+max_block_filter_hashes = 1000
+
 # checkTx timeout for sig verify
 checktx_timeout = "5s"
 
@@ -551,6 +584,11 @@ max_log_bytes = 67108864
 
 # max number of blocks to query logs for
 max_blocks_for_log = 2000
+
+# Node-wide rate, in queries per second, at which eth_getLogs, eth_getFilterLogs
+# and filter polls over 100 blocks are admitted, shared by all clients.
+# 0 disables the limit.
+large_log_query_rps = 30
 
 # max number of calls allowed in an eth_estimateGasAfterCalls request
 max_estimate_gas_calls = 100
@@ -652,12 +690,12 @@ ip_rate_limit_rps = 200
 # Set to 0 to disable per-IP throttling (same effect as ip_rate_limit_rps = 0).
 # Must be at least batch_request_limit when both are positive and rate_limiting_enabled
 # is true (one token is charged per batch element) - enforced at startup.
-ip_rate_limit_burst = 1000
+ip_rate_limit_burst = 200
 
 # rate_limiting_enabled is the master switch for the rate-limit admission
 # middleware on the EVM HTTP plane (:8545). When false, requests bypass method
 # extraction and all rejections from that layer (HTTP 400/413/429).
-rate_limiting_enabled = false
+rate_limiting_enabled = true
 
 # trusted_proxy_cidrs lists CIDRs whose X-Forwarded-For headers are trusted when
 # resolving the client IP for rate limiting. Empty means trust no proxy — set
@@ -668,7 +706,7 @@ trusted_proxy_cidrs = []
 
 # batch_request_limit is the maximum number of requests allowed in a single
 # JSON-RPC batch (HTTP and WebSocket). Set to 0 to disable the limit.
-batch_request_limit = 1000
+batch_request_limit = 100
 
 # batch_response_max_size is the maximum number of bytes returned from a
 # batched JSON-RPC call (HTTP and WebSocket). Set to 0 to disable the limit.
@@ -711,6 +749,25 @@ body_read_idle_timeout = "10s"
 # the EVM HTTP and WebSocket listeners. Set to 0 to disable the limit.
 max_open_connections = 2000
 
+# rpc_default_timeout is the deadline applied (on both HTTP and WebSocket) to an
+# RPC method with no entry in rpc_method_timeouts, such as eth_getBalance or
+# eth_getBlockByNumber. Set to 0 to disable. HTTP requests are also bounded by
+# write_timeout; raise it to permit a longer method timeout over HTTP.
+rpc_default_timeout = "30s"
+
+# rpc_method_timeouts overrides rpc_default_timeout for individual RPC methods
+# (both HTTP and WebSocket). A method with no matching entry here falls back
+# to rpc_default_timeout. Each entry is "method=duration", e.g. "eth_call=60s".
+# A method name ending in "*" (e.g. "debug_trace*=0") matches every method
+# with that prefix; the longest matching prefix wins. A duration of 0 means no
+# deadline is applied by this mechanism.
+#
+# A wildcard here cannot change the timeout for eth_call, eth_estimateGas,
+# eth_createAccessList, eth_sendRawTransaction, eth_sendTransaction,
+# eth_getTransactionCount, or debug_trace* methods - each already has its own
+# entry that wins. To change one of these, name it exactly, e.g. "eth_call=1s".
+rpc_method_timeouts = ["eth_estimateGasAfterCalls=5m"]
+
 
 ###############################################################################
 ###                       Giga Executor Configuration                       ###
@@ -727,6 +784,96 @@ enabled = true
 occ_enabled = true
 
 ###############################################################################
+###                          Giga Node Configuration                        ###
+###############################################################################
+
+# Storage, execution and EVM RPC settings of a Giga (Autobahn) node. Committee and consensus
+# settings stay in the file named by autobahn-config-file in config.toml.
+
+[giga.storage]
+# mode selects the store layout. "validator" skips the state store; "full" opens it
+# for serving queries. Empty follows the node's mode in config.toml.
+mode = ""
+
+# receipts opens the receipt store, which the node's EVM RPC serves transaction receipts,
+# logs and fee history from. When false the node starts no EVM RPC, and refuses to start while a
+# receipt store with history is on disk: move that directory away first.
+receipts = true
+
+# rollback_window is how many blocks behind head the node must remain able to roll back to.
+rollback_window = 1000
+
+# lookback_window is how many queryable blocks are kept below the rollback window.
+# -1 keeps all history.
+lookback_window = 4320000
+
+# state_store_backend is how the state store keeps its history. "pebbledb" stores every version
+# of every key; "undolog" stores the value each block replaced, over the current state, and
+# drops expired history a bucket at a time.
+state_store_backend = "pebbledb"
+
+# prune_interval is how often the storage garbage collector runs.
+prune_interval = "5m0s"
+
+# checkpoint_time_interval is the wall-clock gap between state-commit checkpoints.
+checkpoint_time_interval = "10m0s"
+
+# checkpoint_block_interval places checkpoints on multiples of itself; 0 disables the rule.
+checkpoint_block_interval = 0
+
+[giga.execution]
+# min_gas_price is the lowest effective gas price, in wei, this node admits a transaction at.
+# It only filters local admission; block validity uses the chain-wide floor, and values
+# below it are raised to it.
+min_gas_price = 1000000000
+
+# occ_workers is the number of parallel execution workers; 0 uses GOMAXPROCS.
+occ_workers = 0
+
+# parse_workers is the number of parallel transaction decoding workers; 0 uses GOMAXPROCS.
+parse_workers = 0
+
+# block_result_pool_size is the number of block results kept pooled between executions.
+block_result_pool_size = 1
+
+# evm_rpc_port is the TCP port the EVM-only JSON-RPC listens on, on all interfaces.
+evm_rpc_port = 8545
+
+# evm_ws_port is the TCP port the EVM-only JSON-RPC serves WebSocket on, on all interfaces.
+evm_ws_port = 8546
+
+[giga.rpc]
+# Limits the EVM-only JSON-RPC server enforces. 0 disables a limit.
+
+# max_subscriptions_new_head caps open eth_subscribe("newHeads") subscriptions across all
+# connections.
+max_subscriptions_new_head = 10000
+
+# max_subscriptions_per_connection caps the open subscriptions of a single WebSocket connection.
+max_subscriptions_per_connection = 100
+
+# max_request_body_bytes caps the size, in bytes, of one HTTP request body or WebSocket message.
+# It must be positive.
+max_request_body_bytes = 5242880
+
+# max_concurrent_request_bytes caps the total size, in bytes, of WebSocket request frames read
+# and processed concurrently. Values below max_request_body_bytes act as max_request_body_bytes.
+max_concurrent_request_bytes = 134217728
+
+# ws_admission_timeout is how long a WebSocket connection waits for max_concurrent_request_bytes
+# budget before it is closed; 0 uses the go-ethereum default of 30s.
+ws_admission_timeout = "30s"
+
+# batch_request_limit caps the number of requests in one JSON-RPC batch.
+batch_request_limit = 100
+
+# batch_response_max_size caps the total size, in bytes, of one JSON-RPC batch's responses.
+batch_response_max_size = 25000000
+
+# max_ws_connections caps simultaneously open WebSocket connections.
+max_ws_connections = 2000
+
+###############################################################################
 ###                       Admin Configuration (Auto-managed)                ###
 ###############################################################################
  
@@ -737,6 +884,35 @@ admin_enabled = false
  
 # Listen address for the admin gRPC server. Must be a loopback address.
 admin_address = "127.0.0.1:9095"
+
+###############################################################################
+###                  Cosmos Metrics Configuration (Auto-managed)            ###
+###############################################################################
+
+[cosmos_metrics]
+
+# Report cosmos_params_*, cosmos_general_*, cosmos_validators_*, cosmos_wallet_*
+# and cosmos_bank_* gauges alongside the node's other OTel metrics on the Tendermint
+# Prometheus endpoint ([instrumentation] in config.toml). Off by default.
+enabled = false
+
+# How often committed state is re-read into the reported snapshot.
+refresh_interval = "15s"
+
+# Bond-denom amounts are divided by 10^denom_exponent before being reported.
+denom_exponent = 6
+
+# Bech32 accounts whose balances, delegations, unbondings, redelegations and
+# rewards are reported under cosmos_wallet_*.
+wallet_addresses = []
+
+# Bank transfers of at least this many base units are counted in
+# cosmos_bank_transfers_total and cosmos_bank_transfer_amount_total.
+bank_transfer_threshold = 1000000000000
+
+# ERC-20 contract addresses whose balance of each wallet in wallet_addresses is
+# reported under cosmos_wallet_erc20_balance, read from the wallet's EVM address.
+erc20_tokens = []
 
 ###############################################################################
 ###                   Telemetry Configuration (Auto-managed)                ###
@@ -762,7 +938,7 @@ enable-hostname-label = false
 enable-service-label = false
 
 # PrometheusRetentionTime, when positive, enables a Prometheus metrics sink.
-prometheus-retention-time = 7200
+prometheus-retention-time = 0
 
 # When both 'api.enable' and 'telemetry.enabled' are true, this node will expose
 # application metrics (custom Cosmos SDK metrics) on the API server endpoint along with the
@@ -784,9 +960,6 @@ global-labels = []
 # Enable defines if the API server should be enabled.
 enable = true
 
-# Swagger defines if swagger documentation should automatically be registered.
-swagger = true
-
 # Address defines the API server to listen on.
 address = "tcp://0.0.0.0:1317"
 
@@ -804,89 +977,6 @@ rpc-max-body-bytes = 1000000
 
 # EnableUnsafeCORS defines if CORS should be enabled (unsafe - use it at your own risk).
 enabled-unsafe-cors = false
-
-###############################################################################
-###                     Rosetta Configuration (Auto-managed)                ###
-###############################################################################
-
-[rosetta]
-
-# Enable defines if the Rosetta API server should be enabled.
-enable = false
-
-# Address defines the Rosetta API server to listen on.
-address = ":8080"
-
-# Network defines the name of the blockchain that will be returned by Rosetta.
-blockchain = "app"
-
-# Network defines the name of the network that will be returned by Rosetta.
-network = "network"
-
-# Retries defines the number of retries when connecting to the node before failing.
-retries = 3
-
-# Offline defines if Rosetta server should run in offline mode.
-offline = false
-
-###############################################################################
-###                       gRPC Configuration (Auto-managed)                 ###
-###############################################################################
-
-[grpc]
-
-# Enable defines if the gRPC server should be enabled.
-enable = true
-
-# Address defines the gRPC server address to bind to.
-address = "0.0.0.0:9090"
-
-# MaxRecvMsgSize defines the maximum message size in bytes the server can receive.
-# It bounds per-request memory allocation before the rate limiter fires. Default 4 MB.
-max-recv-msg-size = 4194304
-
-# MaxOpenConnections defines the maximum number of simultaneous open connections. 0 means unlimited.
-max-open-connections = 1000
-
-# MaxConnectionIdle is the duration after which an idle connection is closed (e.g. "5m"). 0 means infinity.
-max-connection-idle = "5m0s"
-
-# MaxConnectionAge is the maximum duration a connection may exist before it is closed (e.g. "30m"). 0 means infinity.
-max-connection-age = "0s"
-
-# MaxConnectionAgeGrace is an additive period after max-connection-age during which the connection is forcibly closed. 0 means infinity.
-max-connection-age-grace = "0s"
-
-# KeepaliveTime is the interval after which, with no activity, the server pings the client to check liveness.
-keepalive-time = "2h0m0s"
-
-# KeepaliveTimeout is the duration the server waits for a keepalive ping ack before closing the connection.
-keepalive-timeout = "20s"
-
-# KeepaliveMinTime is the minimum interval a client must wait between keepalive pings; more frequent pings are penalized.
-keepalive-min-time = "5m0s"
-
-# KeepalivePermitWithoutStream defines whether the server allows keepalive pings even when there are no active streams.
-keepalive-permit-without-stream = false
-
-###############################################################################
-###                        gRPC Web Configuration (Auto-managed)            ###
-###############################################################################
-
-[grpc-web]
-
-# GRPCWebEnable defines if the gRPC-web should be enabled.
-# NOTE: gRPC must also be enabled, otherwise, this configuration is a no-op.
-enable = true
-
-# Address defines the gRPC-web server address to bind to.
-address = "0.0.0.0:9091"
-
-# EnableUnsafeCORS defines if CORS should be enabled (unsafe - use it at your own risk).
-enable-unsafe-cors = false
-
-# MaxOpenConnections defines the number of maximum open connections. 0 means unlimited.
-max-open-connections = 1000
 
 ###############################################################################
 ###                         Genesis Configuration (Auto-managed)            ###
@@ -1046,7 +1136,8 @@ mock-app = false
 #######################################################################
 
 # AutobahnConfigFile is the path to a JSON file containing the Autobahn (GigaRouter)
-# configuration.
+# configuration. When set, the node serves the EVM JSON-RPC instead of Tendermint
+# RPC, and runs the disk-backed EVM-only executor unless mock-app is set.
 #
 # Empty disables Autobahn.
 #
@@ -1210,7 +1301,7 @@ ip-rate-limit-burst = 400
 # rate-limiting-enabled is the master switch for the rate-limit admission
 # middleware on the CometBFT RPC HTTP plane. When false, requests bypass method
 # extraction and all rejections from that layer (HTTP 400/413/429).
-rate-limiting-enabled = false
+rate-limiting-enabled = true
 
 # trusted-proxy-cidrs lists CIDRs whose X-Forwarded-For headers are trusted when
 # resolving the client IP for rate limiting. Empty means trust no proxy.
@@ -1326,7 +1417,7 @@ duplicate-txs-cache-size = "100000"
 keep-invalid-txs-in-cache = false
 
 # Maximum size of a single transaction.
-# NOTE: the max size of a tx transmitted over the network is {max-tx-bytes}.
+# XXX: Unused. Admission uses the protocol gossip limit. A different value logs a warning.
 max-tx-bytes = 1048576
 
 # Maximum size of a batch of transactions to send to a peer
