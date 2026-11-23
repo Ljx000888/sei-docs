@@ -163,7 +163,6 @@ Native USDC: Sei Mainnet 0xe15fC38F6D8c56aF07bbCBe3BAf5708A2Bf42392, Sei Testnet
 - [Bank Precompile](https://docs.sei.io/evm/precompiles/cosmwasm-precompiles/bank): Query and transfer native SEI through Sei's Bank precompile.
 - [CosmWasm Precompile](https://docs.sei.io/evm/precompiles/cosmwasm-precompiles/cosmwasm): Learn how to interact with Sei's CosmWasm precompile through ethers.js, enabling execution, batch operations, and querying of pre-existing CosmWasm contracts directly from your EVM smart contracts.
 - [Auth Precompile](https://docs.sei.io/evm/precompiles/auth): Read account details, auth module parameters, and the next account number from EVM contracts with the Auth precompile.
-- [Authz Precompile](https://docs.sei.io/evm/precompiles/authz): Read Cosmos authz grants between accounts from EVM contracts with the Authz precompile.
 - [Evidence Precompile](https://docs.sei.io/evm/precompiles/evidence): Read evidence of validator misbehavior from EVM contracts with the Evidence precompile.
 - [Mint Precompile](https://docs.sei.io/evm/precompiles/mint): Read the token release schedule and the current minter state from EVM contracts with the Mint precompile.
 - [Params Precompile](https://docs.sei.io/evm/precompiles/params): Read any module parameter by subspace and key from EVM contracts with the Params precompile.
