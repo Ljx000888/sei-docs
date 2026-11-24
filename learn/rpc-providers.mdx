@@ -11,3 +11,28 @@ RPC providers offer endpoints that let you interact with Sei. They also offer
 archive nodes and other services. Providers include:
 
 <EcosystemAppGrid category="rpc-provider" />
+
+## Compare plans for Sei Mainnet
+
+To read an account balance at a past block with `eth_getBalance`, you need an
+endpoint that retains the state for that block.
+
+Download the [Sei dataset](https://github.com/Chain-Love/chain-love/releases/latest/download/sei.json)
+from [Chain.Love](https://www.chain.love/). Run this Python example from the
+folder containing `sei.json` to see the provider, plan and historical data
+label for entries marked as Sei Mainnet EVM RPC.
+
+```python
+import json
+
+with open("sei.json", encoding="utf-8") as source:
+    plans = json.load(source)["apis"]
+
+for plan in plans:
+    if plan["chain"] == "mainnet" and plan["technology"] == "EVM JSON-RPC":
+        name = plan.get("planName") or plan["planType"]
+        print(plan["provider"], name, plan["historicalData"], sep="\t")
+```
+
+The dataset includes cross-network offers. Confirm Sei Mainnet support and
+the oldest available block with the provider.
